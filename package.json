@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "run": "node build.js & node bin/index.mjs"
+  },
+  "dependencies": {
+    "@octokit/auth-app": "^4.0.9",
+    "discord.js": "^14.10.2",
+    "octokit": "^2.0.14"
+  },
+  "devDependencies": {
+    "@types/node": "^18.16.3",
+    "dotenv": "^16.0.3",
+    "esbuild": "0.17.18"
+  }
+}
