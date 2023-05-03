@@ -1,7 +1,16 @@
-require("esbuild").build({
+import { build } from "esbuild";
+
+build({
   entryPoints: ["./src"],
-  outfile: "bin/index.mjs",
+  outfile: "bin/index.js",
+  bundle: true,
   minify: true,
   sourcemap: true,
-  target: "ESNext"
+  target: "esnext",
+  platform: "node",
+  format: "esm",
+  keepNames: true,
+  banner: {
+    js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+  },
 });

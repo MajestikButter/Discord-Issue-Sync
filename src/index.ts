@@ -1,38 +1,34 @@
-import * as fs from "fs";
 import * as dotenv from "dotenv";
-
-import { Octokit } from "octokit";
-import { createAppAuth } from "@octokit/auth-app";
-import { Client } from "discord.js";
-
 dotenv.config();
 
-// Connect Octokit to GitHub app installation
-const pem = fs.readFileSync("private-key.pem");
-const octo = new Octokit({
-  authStrategy: createAppAuth,
-  auth: {
-    appId: 327191,
-    privateKey: `${pem}`,
-    installationId: 37079650,
-  },
+import { Events } from "discord.js";
+import { DataFile } from "./data";
+import { Discord } from "./bot";
+import "./githubApp";
+import "./issueSync";
+import { IssueSync } from "./issueSync";
+
+function minInterval(callback: () => Promise<void>, interval: number) {
+  const loop = async () => {
+    const began = new Date().getTime();
+    await callback();
+    const dif = new Date().getTime() - began;
+    const rem = interval - dif;
+    if (rem > 0) {
+      setTimeout(loop, rem);
+    } else loop();
+  };
+  setTimeout(loop, interval);
+}
+
+setInterval(DataFile.save, 15_000);
+DataFile.watchChanges();
+
+minInterval(IssueSync.syncFromLastGitHubUpdate, 6_000);
+
+Discord.bot.on(Events.ClientReady, async (client) => {
+  const user = client.user;
+  console.log(`[Ready] ${user.username}#${user.discriminator}`);
 });
 
-const issues = await octo.request("GET /repos/{owner}/{repo}/issues", {
-  owner: "Buttered-Toast-Productions",
-  repo: "Dungeon-Game",
-  headers: {
-    "X-GitHub-Api-Version": "2022-11-28",
-  },
-});
-
-console.log(issues);
-
-const bot = new Client({ intents: ["GuildMessages"] });
-bot.login(process.env.TOKEN)
-bot.on("threadCreate", (channel, newlyCreated) => {
-  if (!newlyCreated) return console.log("thread is not new");
-});
-bot.on("messageCreate", (msg) => {
-  
-})
+Discord.bot.login(process.env.TOKEN);
