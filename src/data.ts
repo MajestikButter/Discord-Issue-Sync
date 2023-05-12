@@ -38,7 +38,11 @@ function loadFallback(fallback: object, create = false, fillInto?: object) {
 }
 
 export namespace DataFile {
-  export let data: typeof DEFAULT_DATA = loadFallback(DEFAULT_DATA, true, DEFAULT_DATA);
+  export let data: typeof DEFAULT_DATA = loadFallback(
+    DEFAULT_DATA,
+    true,
+    DEFAULT_DATA
+  );
 
   export function watchChanges() {
     fs.watch("data.json", (ev) => {
@@ -50,7 +54,14 @@ export namespace DataFile {
     fs.writeFile("data.json", JSON.stringify(data, null, " "), () => {});
   }
 
-  export function createCommentLink(discordId: string, gitId: number): CommentLink {
+  export function getLastUpdate() {
+    return data.lastGitUpdate;
+  }
+
+  export function createCommentLink(
+    discordId: string,
+    gitId: number
+  ): CommentLink {
     return {
       discordId,
       gitId,
@@ -61,7 +72,12 @@ export namespace DataFile {
     return data.issueLinks.findIndex((v) => v.number == issueNumber) >= 0;
   }
 
-  export function addLink(threadId: string, issueId: number, issueNumber: number, comments: CommentLink[]) {
+  export function addLink(
+    threadId: string,
+    issueId: number,
+    issueNumber: number,
+    comments: CommentLink[]
+  ) {
     if (hasLink(issueNumber)) return;
     const link = {
       issueId,
@@ -73,11 +89,10 @@ export namespace DataFile {
     return link;
   }
 
-  export function getThreadId(issueId: number) {
-    return data.issueLinks.find((v) => v.issueId == issueId)?.threadId;
-  }
-  export function getIssueLinkByNumber(issueNumber: number) {
-    return data.issueLinks.find((v) => v.number == issueNumber);
+  export function getThreadIds(issueId: number) {
+    return data.issueLinks
+      .filter((v) => v.issueId == issueId)
+      .map((v) => v.threadId);
   }
   export function getIssueLinkByThreadId(threadId: string) {
     return data.issueLinks.find((v) => v.threadId == threadId);

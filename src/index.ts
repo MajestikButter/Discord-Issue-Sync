@@ -5,8 +5,8 @@ import { Events } from "discord.js";
 import { DataFile } from "./data";
 import { Discord } from "./bot";
 import "./githubApp";
-import "./issueSync";
-import { IssueSync } from "./issueSync";
+import "./_issueSync";
+import { IssueSync } from "./_issueSync";
 
 function minInterval(callback: () => Promise<void>, interval: number) {
   const loop = async () => {
