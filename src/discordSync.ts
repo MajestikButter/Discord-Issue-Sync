@@ -28,10 +28,14 @@ async function threadCreated(channelInfo: ChannelInformation, thread: ThreadChan
   const startMsg = await thread.fetchStarterMessage();
   if (!startMsg) throw new Error("Failed to get thread starting message");
 
+  const forum = <ForumChannel>thread.parent;
+  const labels = tagsToLabels(forum, thread.appliedTags, []);
+  if (channelInfo.label) labels.push(channelInfo.label);
+
   const issue = await GitHubApp.createIssue(channelInfo.repoInfo, {
     title: thread.name,
     body: startMsg.cleanContent,
-    labels: channelInfo.label ? [channelInfo.label] : [],
+    labels,
     state: "open",
   });
   DataFile.addLink(thread.id, thread.parentId!, issue.id, issue.number, []);
@@ -82,6 +86,7 @@ function getComment(thread: ThreadChannel, msg: Message | PartialMessage) {
 }
 
 async function messageCreated(channelInfo: ChannelInformation, thread: ThreadChannel, msg: Message) {
+  if (thread.createdTimestamp == msg.createdTimestamp) return;
   const { repoInfo } = channelInfo;
   const issue = DataFile.getIssueLinkByThreadId(thread.id);
   if (!issue) throw new Error("Failed to get issue");
@@ -99,6 +104,23 @@ async function messageDeleted(channelInfo: ChannelInformation, thread: ThreadCha
   const { repoInfo } = channelInfo;
   const comment = getComment(thread, msg);
   await GitHubApp.deleteIssueComment(repoInfo, comment);
+}
+
+export function syncExistingForum(forum: ForumChannel) {
+  const channelInfo = getChannelInfo(forum);
+  if (!channelInfo) return;
+  const threads = forum.threads.cache;
+  return Promise.allSettled(
+    threads.map((thread) => {
+      const link = DataFile.getIssueLinkByThreadId(thread.id);
+      if (!link) {
+        return (async () => {
+          await threadCreated(channelInfo, thread);
+          await threadEdited(channelInfo, thread);
+        })();
+      }
+    })
+  );
 }
 
 function isBot(id?: string | null) {

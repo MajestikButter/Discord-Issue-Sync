@@ -1,10 +1,13 @@
-import { Events } from "discord.js";
+import { Events, ForumChannel } from "discord.js";
 import { DataFile } from "./data";
 import { Discord } from "./bot";
 import "./githubApp";
 import "./discordSync";
 import { syncAllRepos } from "./issueSync";
 import { ENV } from "./env";
+import { Config } from "./config";
+import { getForumIds } from "./repoLink";
+import { syncExistingForum } from "./discordSync";
 
 function minInterval(callback: () => Promise<void>, interval: number) {
   const loop = async () => {
@@ -20,11 +23,17 @@ function minInterval(callback: () => Promise<void>, interval: number) {
 setInterval(DataFile.save, 15_000);
 DataFile.watchChanges();
 
-minInterval(syncAllRepos, 6_000);
+minInterval(syncAllRepos, Config.syncInterval);
 
 Discord.bot.on(Events.ClientReady, async (client) => {
   const user = client.user;
   console.log(`[Ready] ${user.username}#${user.discriminator}`);
+
+  for (const forumId of getForumIds()) {
+    const forum = await client.channels.fetch(forumId);
+    if (!(forum instanceof ForumChannel)) continue;
+    await syncExistingForum(forum);
+  }
 });
 
 Discord.bot.login(ENV.token);

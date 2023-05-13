@@ -30,10 +30,14 @@ try {
   throw new Error("Failed to parse channels.json: " + e);
 }
 
-export function getChannelInfo(thread: ThreadChannel) {
-  const parent = thread.parent;
-  if (!(parent instanceof ForumChannel)) return;
-  return channelMap[parent.id];
+export function getForumIds() {
+  return Object.keys(channelMap);
+}
+
+export function getChannelInfo(channel: ThreadChannel | ForumChannel) {
+  const forum = channel instanceof ForumChannel ? channel : channel.parent;
+  if (!(forum instanceof ForumChannel)) return;
+  return channelMap[forum.id];
 }
 
 export function getInvalidLinks(issue: GetListedIssueData) {
