@@ -1,4 +1,4 @@
-# Majestik Git Bot
+# Discord Issue Sync
 
 ## Setup
 ### NodeJS Script
