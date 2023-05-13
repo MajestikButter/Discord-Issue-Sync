@@ -42,7 +42,8 @@
   "gitHub": {
     "appId": 1234,
     "installationId": 567890
-  }
+  },
+  "syncInterval": 7000
 }
 ```
 
