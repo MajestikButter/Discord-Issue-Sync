@@ -11,4 +11,5 @@ if (!ghConf.installationId) throw new Error("Missing gitHub.installationId confi
 export namespace Config {
   export const appId: number = ghConf.appId;
   export const installationId: number = ghConf.installationId;
+  export const syncInterval: number = ghConf.syncInterval ?? 7_000;
 }

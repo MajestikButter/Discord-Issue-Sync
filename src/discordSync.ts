@@ -5,11 +5,23 @@ import { GitHubApp } from "./githubApp";
 import { Snowflake } from "discord.js";
 import { ChannelInformation, getChannelInfo } from "./repoLink";
 
-function tagsToLabels(forum: ForumChannel, tags: Snowflake[]) {
+function tagsToLabels(forum: ForumChannel, tags: Snowflake[], labels: string[]) {
   const available = forum.availableTags;
   const idMap: { [s: Snowflake]: string } = {};
   for (const t of available) idMap[t.id] = t.name;
-  return tags.map((v) => idMap[v]);
+
+  const newLabels: { [k: string]: true } = {};
+  for (const label of labels) {
+    if (!Object.values(idMap).find((v) => v == label)) {
+      newLabels[label] = true;
+      continue;
+    }
+    if (!tags.includes(label)) continue;
+    newLabels[label] = true;
+  }
+  for (const tag of tags) newLabels[idMap[tag]] = true;
+
+  return Object.keys(newLabels);
 }
 
 async function threadCreated(channelInfo: ChannelInformation, thread: ThreadChannel) {
@@ -40,13 +52,19 @@ async function threadEdited(channelInfo: ChannelInformation, thread: ThreadChann
     await GitHubApp.setIssueLocked(repoInfo, link.number, locked);
   }
 
-  if (locked) return;
+  // if (locked) return;
+  const state = thread.archived ? "closed" : "open";
+  const labels = tagsToLabels(
+    forum,
+    thread.appliedTags,
+    issue.labels.map((v) => (typeof v == "string" ? v : v.name ?? ""))
+  );
 
   await GitHubApp.editIssue(channelInfo.repoInfo, link.number, {
     title: thread.name,
     body: startMsg?.cleanContent ?? "Starting message not found",
-    labels: tagsToLabels(forum, thread.appliedTags),
-    state: thread.archived ? "closed" : "open",
+    labels,
+    state,
   });
 }
 

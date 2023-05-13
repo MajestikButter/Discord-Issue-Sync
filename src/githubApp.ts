@@ -60,7 +60,7 @@ export namespace GitHubApp {
 
   export async function editIssue(repoInfo: RepositoryInformation, issueNumber: number, details: PartialIssueDetails) {
     const { owner, repo } = repoInfo;
-    const { labels, title, body } = details;
+    const { labels, title, body, state } = details;
     return (
       await githubApp.request("PATCH /repos/{owner}/{repo}/issues/{issue_number}", {
         owner,
@@ -69,6 +69,7 @@ export namespace GitHubApp {
         title,
         body,
         labels,
+        state,
       })
     ).data;
   }
