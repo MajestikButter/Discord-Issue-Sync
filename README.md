@@ -3,7 +3,7 @@
 ## Setup
 ### NodeJS Script
 1. Install [NodeJS](https://nodejs.org/en/download)
-2. Download a release zip from the [Releases](https://github.com/MajestikButter/Majestik-Git-Bot/releases) page
+2. Download a release zip from the [Releases](https://github.com/MajestikButter/Discord-Issue-Sync/releases) page
 3. Extract the contents to a new directory
 4. Open a terminal in the new directory
 5. Run `npm install` to install package dependencies
