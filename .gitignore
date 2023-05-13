@@ -130,3 +130,6 @@ dist
 # Other stuff
 *.pem
 bin
+data.json
+config.json
+channels.json

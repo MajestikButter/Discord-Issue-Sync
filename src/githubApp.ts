@@ -2,14 +2,15 @@ import * as fs from "fs";
 
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "octokit";
+import { Config } from "./config";
 
 const pem = fs.readFileSync("private-key.pem");
 const githubApp = new Octokit({
   authStrategy: createAppAuth,
   auth: {
-    appId: 327191,
+    appId: Config.appId,
     privateKey: `${pem}`,
-    installationId: 37079650,
+    installationId: Config.installationId,
   },
 });
 
@@ -22,14 +23,12 @@ export interface IssueDetails {
   title: string;
   body: string;
   labels: string[];
+  state: "open" | "closed";
 }
 export type PartialIssueDetails = Partial<IssueDetails> & { title: string };
 
 export namespace GitHubApp {
-  export async function getIssues(
-    repoInfo: RepositoryInformation,
-    since?: string
-  ) {
+  export async function getIssues(repoInfo: RepositoryInformation, since?: string) {
     const { owner, repo } = repoInfo;
     return (
       await githubApp.request("GET /repos/{owner}/{repo}/issues", {
@@ -42,10 +41,7 @@ export namespace GitHubApp {
     ).data;
   }
 
-  export async function createIssue(
-    repoInfo: RepositoryInformation,
-    details: IssueDetails
-  ) {
+  export async function createIssue(repoInfo: RepositoryInformation, details: IssueDetails) {
     const { owner, repo } = repoInfo;
     const { labels, title, body } = details;
     return (
@@ -59,18 +55,14 @@ export namespace GitHubApp {
     ).data;
   }
 
-  export async function editIssue(
-    repoInfo: RepositoryInformation,
-    issue: number,
-    details: PartialIssueDetails
-  ) {
+  export async function editIssue(repoInfo: RepositoryInformation, issueNumber: number, details: PartialIssueDetails) {
     const { owner, repo } = repoInfo;
     const { labels, title, body } = details;
     return (
-      await githubApp.request("POST /repos/{owner}/{repo}/issues", {
+      await githubApp.request("PATCH /repos/{owner}/{repo}/issues/{issue_number}", {
         owner,
         repo,
-        issue_number: issue,
+        issue_number: issueNumber,
         title,
         body,
         labels,
@@ -78,82 +70,68 @@ export namespace GitHubApp {
     ).data;
   }
 
-  export async function getIssue(
-    repoInfo: RepositoryInformation,
-    issue: number
-  ) {
+  export async function getIssue(repoInfo: RepositoryInformation, issueNumber: number) {
     const { owner, repo } = repoInfo;
     return (
-      await githubApp.request(
-        "GET /repos/{owner}/{repo}/issues/{issue_number}",
-        { owner, repo, issue_number: issue }
-      )
-    ).data;
-  }
-
-  export async function setIssueLocked(
-    repoInfo: RepositoryInformation,
-    issue: number,
-    locked = true
-  ) {
-    const { owner, repo } = repoInfo;
-    return await githubApp.request(
-      "PUT /repos/{owner}/{repo}/issues/{issue_number}/lock",
-      {
+      await githubApp.request("GET /repos/{owner}/{repo}/issues/{issue_number}", {
         owner,
         repo,
-        issue_number: issue,
-        lock_reason: locked ? "resolved" : undefined,
-      }
-    );
-  }
-
-  export async function getIssueComments(
-    repoInfo: RepositoryInformation,
-    issue: number,
-    since?: string
-  ) {
-    const { owner, repo } = repoInfo;
-    return (
-      await githubApp.request(
-        "GET /repos/{owner}/{repo}/issues/{issue_number}/comments",
-        { owner, repo, issue_number: issue, since }
-      )
+        issue_number: issueNumber,
+      })
     ).data;
   }
 
-  export async function createIssueComment(
-    repoInfo: RepositoryInformation,
-    issue: number,
-    body: string
-  ) {
+  export async function setIssueLocked(repoInfo: RepositoryInformation, issueNumber: number, locked = true) {
     const { owner, repo } = repoInfo;
-    await githubApp.request(
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/comments",
-      { owner, repo, issue_number: issue, body }
-    );
+    const method = locked ? "PUT" : "DELETE";
+    await githubApp.request(method + " /repos/{owner}/{repo}/issues/{issue_number}/lock", {
+      owner,
+      repo,
+      issue_number: issueNumber,
+      lock_reason: locked ? "resolved" : undefined,
+    });
   }
 
-  export async function editIssueComment(
-    repoInfo: RepositoryInformation,
-    comment: number,
-    body: string
-  ) {
+  export async function getIssueComments(repoInfo: RepositoryInformation, issueNumber: number, since?: string) {
     const { owner, repo } = repoInfo;
-    await githubApp.request(
-      "PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}",
-      { owner, repo, comment_id: comment, body }
-    );
+    return (
+      await githubApp.request("GET /repos/{owner}/{repo}/issues/{issue_number}/comments", {
+        owner,
+        repo,
+        issue_number: issueNumber,
+        since,
+      })
+    ).data;
   }
 
-  export async function deleteIssueComment(
-    repoInfo: RepositoryInformation,
-    comment: number
-  ) {
+  export async function createIssueComment(repoInfo: RepositoryInformation, issueNumber: number, body: string) {
     const { owner, repo } = repoInfo;
-    await githubApp.request(
-      "DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}",
-      { owner, repo, comment_id: comment }
-    );
+    return (
+      await githubApp.request("POST /repos/{owner}/{repo}/issues/{issue_number}/comments", {
+        owner,
+        repo,
+        issue_number: issueNumber,
+        body,
+      })
+    ).data;
+  }
+
+  export async function editIssueComment(repoInfo: RepositoryInformation, comment: number, body: string) {
+    const { owner, repo } = repoInfo;
+    await githubApp.request("PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}", {
+      owner,
+      repo,
+      comment_id: comment,
+      body,
+    });
+  }
+
+  export async function deleteIssueComment(repoInfo: RepositoryInformation, comment: number) {
+    const { owner, repo } = repoInfo;
+    await githubApp.request("DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}", {
+      owner,
+      repo,
+      comment_id: comment,
+    });
   }
 }

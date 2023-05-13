@@ -1,14 +1,9 @@
-import {
-  ForumChannel,
-  Message,
-  PartialMessage,
-  ThreadChannel,
-} from "discord.js";
+import { ForumChannel, Message, PartialMessage, ThreadChannel } from "discord.js";
 import { Discord } from "./bot";
 import { DataFile } from "./data";
 import { GitHubApp } from "./githubApp";
 import { Snowflake } from "discord.js";
-import { ChannelInformation, getChannelInfo } from "./repolink";
+import { ChannelInformation, getChannelInfo } from "./repoLink";
 
 function tagsToLabels(forum: ForumChannel, tags: Snowflake[]) {
   const available = forum.availableTags;
@@ -17,25 +12,20 @@ function tagsToLabels(forum: ForumChannel, tags: Snowflake[]) {
   return tags.map((v) => idMap[v]);
 }
 
-async function threadCreated(
-  channelInfo: ChannelInformation,
-  thread: ThreadChannel
-) {
+async function threadCreated(channelInfo: ChannelInformation, thread: ThreadChannel) {
   const startMsg = await thread.fetchStarterMessage();
   if (!startMsg) throw "Failed to get thread starting message";
 
   const issue = await GitHubApp.createIssue(channelInfo.repoInfo, {
     title: thread.name,
     body: startMsg.cleanContent,
-    labels: channelInfo.tag ? [channelInfo.tag] : [],
+    labels: channelInfo.label ? [channelInfo.label] : [],
+    state: "open",
   });
-  DataFile.addLink(thread.id, issue.id, issue.number, []);
+  DataFile.addLink(thread.id, thread.parentId!, issue.id, issue.number, []);
 }
 
-async function threadEdited(
-  channelInfo: ChannelInformation,
-  thread: ThreadChannel
-) {
+async function threadEdited(channelInfo: ChannelInformation, thread: ThreadChannel) {
   const { repoInfo } = channelInfo;
   const link = DataFile.getIssueLinkByThreadId(thread.id);
   // TODO: Handle this better, potentially create a new issue when this happens? Maybe make this a setting?
@@ -43,7 +33,7 @@ async function threadEdited(
 
   const startMsg = await thread.fetchStarterMessage();
   const forum = <ForumChannel>thread.parent;
-  const issue = await GitHubApp.getIssue(repoInfo, link.issueId);
+  const issue = await GitHubApp.getIssue(repoInfo, link.number);
 
   const locked = thread.locked ?? issue.locked;
   if (issue.locked !== thread.locked) {
@@ -56,6 +46,7 @@ async function threadEdited(
     title: thread.name,
     body: startMsg?.cleanContent ?? "Starting message not found",
     labels: tagsToLabels(forum, thread.appliedTags),
+    state: thread.archived ? "closed" : "open",
   });
 }
 
@@ -72,65 +63,86 @@ function getComment(thread: ThreadChannel, msg: Message | PartialMessage) {
   return cLink.gitId;
 }
 
-async function messageCreated(
-  channelInfo: ChannelInformation,
-  thread: ThreadChannel,
-  msg: Message
-) {
+async function messageCreated(channelInfo: ChannelInformation, thread: ThreadChannel, msg: Message) {
   const { repoInfo } = channelInfo;
-  const issue = DataFile.getIssueId(thread.id);
+  const issue = DataFile.getIssueLinkByThreadId(thread.id);
   if (!issue) throw "Failed to get issue";
-  await GitHubApp.createIssueComment(repoInfo, issue, formatMessage(msg));
+  const comment = await GitHubApp.createIssueComment(repoInfo, issue.number, formatMessage(msg));
+  issue.comments.push(DataFile.createCommentLink(msg.id, comment.id));
 }
 
-async function messageEdited(
-  channelInfo: ChannelInformation,
-  thread: ThreadChannel,
-  msg: Message | PartialMessage
-) {
+async function messageEdited(channelInfo: ChannelInformation, thread: ThreadChannel, msg: Message | PartialMessage) {
   const { repoInfo } = channelInfo;
   const comment = getComment(thread, msg);
   await GitHubApp.editIssueComment(repoInfo, comment, formatMessage(msg));
 }
 
-async function messageDeleted(
-  channelInfo: ChannelInformation,
-  thread: ThreadChannel,
-  msg: Message | PartialMessage
-) {
+async function messageDeleted(channelInfo: ChannelInformation, thread: ThreadChannel, msg: Message | PartialMessage) {
   const { repoInfo } = channelInfo;
   const comment = getComment(thread, msg);
   await GitHubApp.deleteIssueComment(repoInfo, comment);
 }
 
-Discord.bot.on("threadCreate", (thread) => {
+function isBot(id?: string | null) {
+  return id == Discord.bot.user?.id;
+}
+
+Discord.bot.on("threadCreate", async (thread) => {
+  if (isBot(thread.ownerId)) return;
   const channelInfo = getChannelInfo(thread);
   if (!channelInfo) return;
-  threadCreated(channelInfo, thread);
+  try {
+    await threadCreated(channelInfo, thread);
+  } catch (e) {
+    console.warn("[Request Failed]", e);
+  }
 });
-Discord.bot.on("threadUpdate", (thread) => {
+Discord.bot.on("threadUpdate", async (_, thread) => {
   const channelInfo = getChannelInfo(thread);
+  // TODO: Implement check to prevent update loop between git and discord
   if (!channelInfo) return;
-  threadEdited(channelInfo, thread);
+  try {
+    await threadEdited(channelInfo, thread);
+  } catch (e) {
+    console.warn("[Request Failed]", e);
+  }
 });
-Discord.bot.on("messageCreate", (msg) => {
+Discord.bot.on("messageCreate", async (msg) => {
+  if (isBot(msg.author.id)) return;
   const channel = msg.channel;
+  if (msg.system) return;
   if (!(channel instanceof ThreadChannel)) return;
   const channelInfo = getChannelInfo(channel);
   if (!channelInfo) return;
-  messageCreated(channelInfo, channel, msg);
+  try {
+    await messageCreated(channelInfo, channel, msg);
+  } catch (e) {
+    console.warn("[Request Failed]", e);
+  }
 });
-Discord.bot.on("messageUpdate", (msg) => {
+Discord.bot.on("messageUpdate", async (msg) => {
+  if (isBot(msg.author?.id)) return;
   const channel = msg.channel;
+  if (msg.system) return;
   if (!(channel instanceof ThreadChannel)) return;
   const channelInfo = getChannelInfo(channel);
   if (!channelInfo) return;
-  messageEdited(channelInfo, channel, msg);
+  try {
+    await messageEdited(channelInfo, channel, msg);
+  } catch (e) {
+    console.warn("[Request Failed]", e);
+  }
 });
-Discord.bot.on("messageDelete", (msg) => {
+Discord.bot.on("messageDelete", async (msg) => {
+  if (isBot(msg.author?.id)) return;
   const channel = msg.channel;
+  if (msg.system) return;
   if (!(channel instanceof ThreadChannel)) return;
   const channelInfo = getChannelInfo(channel);
   if (!channelInfo) return;
-  messageDeleted(channelInfo, channel, msg);
+  try {
+    await messageDeleted(channelInfo, channel, msg);
+  } catch (e) {
+    console.warn("[Request Failed]", e);
+  }
 });
