@@ -1,15 +1,15 @@
-import * as fs from "fs";
-
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "octokit";
 import { Config } from "./config";
+import { ENV } from "./env";
 
-const pem = fs.readFileSync("private-key.pem");
+import * as fs from "fs";
+
 const githubApp = new Octokit({
   authStrategy: createAppAuth,
   auth: {
     appId: Config.appId,
-    privateKey: `${pem}`,
+    privateKey: ENV.gitKey ?? `${fs.readFileSync("private-key.pem")}`,
     installationId: Config.installationId,
   },
 });

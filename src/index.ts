@@ -1,12 +1,10 @@
-import * as dotenv from "dotenv";
-dotenv.config();
-
 import { Events } from "discord.js";
 import { DataFile } from "./data";
 import { Discord } from "./bot";
 import "./githubApp";
 import "./discordSync";
 import { syncAllRepos } from "./issueSync";
+import { ENV } from "./env";
 
 function minInterval(callback: () => Promise<void>, interval: number) {
   const loop = async () => {
@@ -29,4 +27,4 @@ Discord.bot.on(Events.ClientReady, async (client) => {
   console.log(`[Ready] ${user.username}#${user.discriminator}`);
 });
 
-Discord.bot.login(process.env.TOKEN);
+Discord.bot.login(ENV.token);
