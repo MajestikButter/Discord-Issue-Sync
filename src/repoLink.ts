@@ -10,23 +10,24 @@ export interface ChannelInformation {
   repoInfo: RepositoryInformation;
   label?: string;
 }
-if (!fs.existsSync("./channels.json")) throw "No channels.json file found";
+if (!fs.existsSync("./channels.json")) throw new Error("No channels.json file found");
 
 let channelMap: { [k: string]: ChannelInformation } = {};
 try {
   channelMap = JSON.parse(`${fs.readFileSync("./channels.json")}`);
 
-  if (typeof channelMap !== "object" || Array.isArray(channelMap)) throw "Channels object is of an incorrect type";
+  if (typeof channelMap !== "object" || Array.isArray(channelMap))
+    throw new Error("Channels object is of an incorrect type");
 
   for (const k in channelMap) {
     const def = channelMap[k];
-    if (!def.repoInfo) throw "Channel is missing repoInfo";
-    if (typeof def !== "object" || Array.isArray(def)) throw "RepoInfo is of an incorrect type";
+    if (!def.repoInfo) throw new Error("Channel is missing repoInfo");
+    if (typeof def !== "object" || Array.isArray(def)) throw new Error("RepoInfo is of an incorrect type");
     const { owner, repo } = def.repoInfo;
-    if (!owner || !repo) throw "RepoInfo is missing an owner or repo property";
+    if (!owner || !repo) throw new Error("RepoInfo is missing an owner or repo property");
   }
 } catch (e) {
-  throw "Failed to parse channels.json: " + e;
+  throw new Error("Failed to parse channels.json: " + e);
 }
 
 export function getChannelInfo(thread: ThreadChannel) {
@@ -55,7 +56,7 @@ export async function getTaggedChannels(repoInfo: RepositoryInformation, labels:
     if (owner != repoInfo.owner || repo != repoInfo.repo) continue;
     if (v.label && !labels.includes(v.label)) continue;
     const channel = await Discord.bot.channels.fetch(id);
-    if (!channel || !(channel instanceof ForumChannel)) throw "Failed to get channel";
+    if (!channel || !(channel instanceof ForumChannel)) throw new Error("Failed to get channel");
     channels.push(channel);
   }
   return channels;

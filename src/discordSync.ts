@@ -14,7 +14,7 @@ function tagsToLabels(forum: ForumChannel, tags: Snowflake[]) {
 
 async function threadCreated(channelInfo: ChannelInformation, thread: ThreadChannel) {
   const startMsg = await thread.fetchStarterMessage();
-  if (!startMsg) throw "Failed to get thread starting message";
+  if (!startMsg) throw new Error("Failed to get thread starting message");
 
   const issue = await GitHubApp.createIssue(channelInfo.repoInfo, {
     title: thread.name,
@@ -29,7 +29,7 @@ async function threadEdited(channelInfo: ChannelInformation, thread: ThreadChann
   const { repoInfo } = channelInfo;
   const link = DataFile.getIssueLinkByThreadId(thread.id);
   // TODO: Handle this better, potentially create a new issue when this happens? Maybe make this a setting?
-  if (!link) throw "Failed to get issue";
+  if (!link) throw new Error("Failed to get issue");
 
   const startMsg = await thread.fetchStarterMessage();
   const forum = <ForumChannel>thread.parent;
@@ -57,16 +57,16 @@ function formatMessage(msg: Message | PartialMessage) {
 
 function getComment(thread: ThreadChannel, msg: Message | PartialMessage) {
   const link = DataFile.getIssueLinkByThreadId(thread.id);
-  if (!link) throw "Failed to get issue";
+  if (!link) throw new Error("Failed to get issue");
   const cLink = link.comments.find((v) => v.discordId == msg.id);
-  if (!cLink) throw "Failed to get comment";
+  if (!cLink) throw new Error("Failed to get comment");
   return cLink.gitId;
 }
 
 async function messageCreated(channelInfo: ChannelInformation, thread: ThreadChannel, msg: Message) {
   const { repoInfo } = channelInfo;
   const issue = DataFile.getIssueLinkByThreadId(thread.id);
-  if (!issue) throw "Failed to get issue";
+  if (!issue) throw new Error("Failed to get issue");
   const comment = await GitHubApp.createIssueComment(repoInfo, issue.number, formatMessage(msg));
   issue.comments.push(DataFile.createCommentLink(msg.id, comment.id));
 }

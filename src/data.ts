@@ -26,7 +26,7 @@ function loadFallback(fallback: object, create = false, fillInto?: object) {
     if (create) {
       fs.writeFileSync("data.json", JSON.stringify(fallback));
     } else {
-      throw "No data.json file exists";
+      throw new Error("No data.json file exists");
     }
   }
   try {

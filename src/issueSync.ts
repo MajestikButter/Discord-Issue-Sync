@@ -75,7 +75,7 @@ export async function editIssue(
 ) {
   // TODO: Implement check to prevent update loop between git and discord
   const link = DataFile.getIssueLinkByThreadId(thread.id);
-  if (!link) throw "failed to get issue link";
+  if (!link) throw new Error("failed to get issue link");
 
   if (thread.name != issue.title) await thread.setName(issue.title);
   if ((issue.state == "closed") != thread.archived) await thread.setArchived(issue.state == "closed");
@@ -110,7 +110,7 @@ export async function syncIssues(repoInfo: RepositoryInformation) {
             await createIssue(repoInfo, issue, channel);
           } else {
             const thread = await channel.threads.fetch(threadId);
-            if (!thread) throw "failed to get thread";
+            if (!thread) throw new Error("failed to get thread");
             await editIssue(repoInfo, issue, channel, thread);
           }
         }
