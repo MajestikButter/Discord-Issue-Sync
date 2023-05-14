@@ -77,8 +77,10 @@ export async function editIssue(
   const link = DataFile.getIssueLinkByThreadId(thread.id);
   if (!link) throw new Error("failed to get issue link");
 
-  if (thread.name != issue.title) await thread.setName(issue.title);
   if ((issue.state == "closed") != thread.archived) await thread.setArchived(issue.state == "closed");
+  if (thread.archived) return;
+
+  if (thread.name != issue.title) await thread.setName(issue.title);
 
   thread.setAppliedTags(labelsToTags(forum, issue.labels));
 
